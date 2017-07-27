@@ -5,88 +5,105 @@
 #	sudo yum install -y vim
 #fi
 
-if [ "$SUCHP_HOME" = "" ]; then
-	SUCHP_HOME=~/suchp_familly
-fi
-SCP_PREFIX=$SUCHP_HOME
-SCP_GITHUB=$SCP_PREFIX/github
-SCP_YUM=$SCP_PREFIX/yum
-SCP_YUM_ENV=$SCP_YUM/env
-VIMRUNTIMEDIR=/usr/local/share/vim/vim80
-SCP_YUM_ENV_VIM=$SCP_YUM_ENV/vim
-SCP_UPDATE_VIM() {
-	#command -v git
-	#if [ $? -ne 0]; then
-	#	echo "excute: sudo apt-get install git"
-	#	sudo apt-get install git
-	#	if [ $? -ne 0 ]; then
-	#		exit 1
-	#	fi
-	#fi
+SCP_CREATE_DIR(){
+	DIR=$1
+	if [ "$DIR" == "" ];then
+		exit 1
+	fi  
+	mkdir -p $DIR
+}
 
+if [ "$SUCHP_HOME" = "" ]; then
+	SUCHP_HOME=$HOME/suchp_familly
+fi
+
+SCP_PREFIX=$SUCHP_HOME
+SCP_CREATE_DIR $SCP_PREFIX
+SCP_YUM=$SCP_PREFIX/yum
+SCP_CREATE_DIR $SCP_YUM
+SCP_YUM_ENV=$SCP_YUM/env
+SCP_CREATE_DIR $SCP_YUM_ENV
+SCP_YUM_SCRIPTS=$SCP_YUM/scripts
+SCP_CREATE_DIR $SCP_YUM_SCRIPTS
+SCP_YUM_CODE=$SCP_YUM/code
+SCP_CREATE_DIR $SCP_YUM_CODE
+SCP_GITHUB=$SCP_PREFIX/github
+SCP_CREATE_DIR $SCP_GITHUB
+SCP_TOOLS=$SCP_PREFIX/tools
+SCP_CREATE_DIR $SCP_TOOLS
+
+VIMRUNTIMEDIR=/usr/share/vim/vim80
+SCP_YUM_ENV_VIM=$SCP_YUM_ENV/vim
+SCP_PLUGIN=~/.vim/bundle
+PATH_GITHUB_VIM=$SCP_GITHUB/vim
+
+SCP_UPDATE_VIM_SOURCE_CODE() {
 	sudo apt-get install git
-	SCP_VIMGITHUB=$SCP_GITHUB/vim
-	if [ -d $SCP_VIMGITHUB ];then
-		cd $SCP_VIMGITHUB
+	if [ -d $PATH_GITHUB_VIM ];then
+		cd $PATH_GITHUB_VIM
 		git pull
 	else
-		git clone https://github.com/vim/vim.git $SCP_VIMGITHUB
+		git clone https://github.com/vim/vim.git $PATH_GITHUB_VIM
 	fi
 }
+
 SCP_INSTALL_VIM(){
+
 	sudo apt-get autoremove vim
 
-	SCP_UPDATE_VIM
+	#SCP_UPDATE_VIM_SOURCE_CODE
+	# dependon libncurses5-dev
+	sudo apt-get install libncurses5-dev
+	# clip_board dependon libgtk2.0-dev, libgnome2-dev, libxt-dev, libx11-dev
+	sudo apt-get install libgtk2.0-dev libgnome2-dev libxt-dev libx11-dev
+	# mkdir by self
+	cd $PATH_GITHUB_VIM
 
-	SCP_UPDATE_BUNDLE
-
+	# 只能有一个
+	#--enable-pythoninterp \
+	#--with-python-config-dir=/usr/lib/python2.7/config-x86_64-linux-gnu \
+	#--enable-python3interp \
+	#--with-python3-config-dir=/usr/lib/python3.5/config-3.5m-x86_64-linux-gnu \
 	./configure \
-	   --enable-perlinterp \
-	   --enable-python3interp \
-	   --enable-pythoninterp \
-	   --enable-rubyinterp \
-	   --enable-cscope \
-	   --enable-gui=auto \
-	   --enable-gtk2-check \
 	   --with-features=huge \
 	   --enable-multibyte \
+	   --enable-perlinterp \
+	   --enable-pythoninterp=yes \
+	   --with-python-config-dir=/usr/lib/python2.7/config-x86_64-linux-gnu \
+	   --enable-python3interp \
+	   --with-python3-config-dir=/usr/lib/python3.5/config-3.5m-x86_64-linux-gnu \
+	   --enable-rubyinterp \
+	   --enable-luainterp \
+	   --enable-cscope \
+	   --enable-gui=auto=gtk \
+	   --enable-gtk2-check=yes \
+	   --with-features=huge \
 	   --with-x \
+	   --enable-multibyte \
 	   --with-compiledby="asd" \
-	   --with-python3 \
-	   --with-python2 \
 	   --prefix=/usr
-
-	make VIMRUNTIMEDIR=$VIMRUNTIMEDIR
+	echo "make clean;make VIMRUNTIMEDIR=$VIMRUNTIMEDIR"
+	make clean;make VIMRUNTIMEDIR=$VIMRUNTIMEDIR
 	sudo make install
 }
 
-SCP_UPDATE_BUNDLE()
+SCP_INSTALL_BUNDLE()
 {
-	if [ -d ~/.vim/bundle/Vundle ];then
-		cd ~/.vim/bundle/Vundle
-		git pull
-	else
-		git clone https://github.com/gmarik/vundle.git ~/.vim/bundle/Vundle
-	fi
-	vim -c "BundleInstall" -c "qall"
-}
-
-SCP_INSTALL_PLUGIN_YOUCOMPLETE()
-{
-	sudo apt-get install clang
-	sudo apt-get install libboost-all-dev
+	git clone https://github.com/gmarik/Vundle.vim.git ~/.vim/bundle/Vundle.vim
+	echo "vim -c \"PluginInstall\" -c \"qall\""
+	vim -c "PluginInstall" -c "qall"
 }
 
 SCP_CONFIG_VIM(){
 	PATH_VIMRC=~/
-	rm -f $PATH_VIMRC/.vimrc
-	echo "#### ln -s $SCP_YUM_ENV/vim/vimrc ~/.vimrc"
-	ln -s $SCP_YUM_ENV_VIM/vimrc $PATH_VIMRC/.vimrc
+	echo "#### ln -sf $SCP_YUM_ENV_VIM/vimrc ~/.vimrc"
+	ln -sf $SCP_YUM_ENV_VIM/vimrc $PATH_VIMRC/.vimrc
 
 	#VIMRUNTIMEDIR= $(`vim --version | grep '\$VIM' | awk 'NR==2' |cut -d '"' -f 2`)
 	FILE_SOLARIZED_VIM=$VIMRUNTIMEDIR/colors/solarized.vim
-	sudo rm -rf $FILE_SOLARIZED_VIM
 	echo "sudo ln -s $SCP_YUM_ENV_VIM/solarized.vim $FILE_SOLARIZED_VIM"
-	sudo ln -s $SCP_YUM_ENV_VIM/solarized.vim $FILE_SOLARIZED_VIM
+	sudo ln -sf $SCP_YUM_ENV_VIM/solarized.vim $FILE_SOLARIZED_VIM
 }
+SCP_INSTALL_VIM
+SCP_INSTALL_BUNDLE
 SCP_CONFIG_VIM
